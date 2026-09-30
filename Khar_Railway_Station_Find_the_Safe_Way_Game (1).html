@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find the Safe Way - Railway Station Challenge</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f7f6;color:#183247;font-family:Arial,sans-serif}
+.game{max-width:540px;margin:auto;padding:18px}.head{text-align:center}.eyebrow{font-size:12px;font-weight:700;color:#617785;letter-spacing:.5px}
+h1{font-size:27px;margin:6px 0}.sub{font-size:14px;color:#617785}.top{display:flex;gap:10px;margin:15px 0}.box{background:#fff;border:1px solid #d9e2e5;border-radius:13px;padding:10px;text-align:center;font-weight:700;flex:1}
+.progress{height:9px;background:#dfe7e9;border-radius:20px;overflow:hidden;margin-bottom:15px}.bar{height:100%;width:0;background:#177b7f;transition:.3s}
+.card{background:#fff;border:1px solid #d9e2e5;border-radius:20px;padding:18px;box-shadow:0 5px 18px rgba(20,50,70,.08)}
+.scene{height:205px;border-radius:16px;position:relative;overflow:hidden;background:linear-gradient(#d8edf1 0 43%,#c9c1b2 43% 57%,#555d66 57% 100%)}
+.station{position:absolute;left:6%;top:8%;font-size:48px}.sign{position:absolute;right:7%;top:10%;background:#fff;padding:7px 9px;border-radius:7px;font-size:12px;font-weight:800}
+.platform{position:absolute;left:0;right:0;bottom:35%;height:9px;background:#e4d7aa}.yellow{position:absolute;left:0;right:0;bottom:30%;border-top:4px solid #e7c64c}
+.track{position:absolute;left:0;right:0;bottom:0;height:29%;background:#3e464d}.rail1,.rail2{position:absolute;left:0;right:0;border-top:4px solid #b7bec2}.rail1{bottom:22%}.rail2{bottom:7%}
+.person{position:absolute;left:7%;bottom:33%;font-size:38px;transition:left .45s}.safe{position:absolute;right:9%;bottom:42%;background:#e8f3ef;border:2px solid #177b7f;border-radius:10px;padding:7px;font-size:25px}
+.question{font-size:16px;line-height:1.45;margin:13px 0}.title{font-size:20px;font-weight:800;margin-top:15px}.answers{display:grid;gap:10px}
+.answer{border:1px solid #ccd9dd;background:#f8fbfb;border-radius:12px;padding:13px;text-align:left;min-height:50px;font-size:14px}.answer:disabled{cursor:default}
+.feedback{min-height:44px;margin-top:11px;font-size:14px;font-weight:700}.next,.restart{width:100%;border:0;background:#177b7f;color:#fff;border-radius:12px;padding:13px;font-weight:800;margin-top:7px}.hidden{display:none}
+.result{text-align:center}.big{font-size:48px;font-weight:900;margin:10px}.badge{display:inline-block;background:#f0d27a;border-radius:999px;padding:9px 14px;font-weight:800}.small{font-size:13px;color:#667983}
+</style>
+</head>
+<body>
+<div class="game">
+  <div class="head">
+    <div class="eyebrow">KHAR RAILWAY STATION • SAFE MOBILITY</div>
+    <h1>🚉 Find the Safe Way</h1>
+    <div class="sub">Move through the station from A → E. Spot the risk and choose the safer way.</div>
+  </div>
+
+  <div id="play">
+    <div class="top"><div class="box">⭐ Score: <span id="score">0</span></div><div class="box">⏱️ Time: <span id="timer">60</span>s</div></div>
+    <div class="progress"><div id="bar" class="bar"></div></div>
+
+    <div class="card">
+      <div class="scene">
+        <div class="station">🚉</div><div class="sign">KHAR<br>ROAD</div>
+        <div class="platform"></div><div class="yellow"></div>
+        <div class="track"><div class="rail1"></div><div class="rail2"></div></div>
+        <div id="person" class="person">🧑</div><div class="safe">🟢</div>
+      </div>
+      <div class="title"><span id="point">A</span> → <span id="dest">B</span> · <span id="title"></span></div>
+      <div id="question" class="question"></div>
+      <div id="answers" class="answers"></div>
+      <div id="feedback" class="feedback" aria-live="polite"></div>
+      <button id="next" class="next hidden">Continue →</button>
+    </div>
+  </div>
+
+  <div id="result" class="card result hidden">
+    <div style="font-size:55px">🎉</div><h2>Station Challenge Complete!</h2>
+    <div class="big"><span id="final">0</span>/50</div>
+    <div id="badge" class="badge"></div>
+    <p id="resultText"></p>
+    <button class="restart" onclick="restart()">Play Again</button>
+    <p class="small">Remember: stay alert, keep away from the platform edge, use designated routes and know where the safer spaces are.</p>
+  </div>
+</div>
+
+<script>
+const qs=[
+{p:"A",d:"B",t:"Enter Safely",q:"You arrive at a busy station. What is the safer way to move inside?",a:["Push through the crowd.","Walk calmly and follow the marked route.","Run so you don't miss the train."],c:1,w:"Move calmly and follow marked pedestrian routes."},
+{p:"B",d:"C",t:"Crossing the Station",q:"You need to get to another platform. Which route should you use?",a:["Cross the railway tracks.","Use the foot overbridge/subway or designated crossing.","Walk along the tracks."],c:1,w:"Use the station's designated pedestrian route to change platforms."},
+{p:"C",d:"D",t:"Platform Safety",q:"Where is the safer place to wait for your train?",a:["Behind the safety line, away from the edge.","Right at the platform edge.","On the track when the train is far away."],c:0,w:"Stay behind the safety line and away from the platform edge."},
+{p:"D",d:"E",t:"Find the Safe Space",q:"The platform becomes crowded. What should you do?",a:["Move into the track area.","Stay calm and move to the designated/safer waiting space.","Push through people to get closer to the train."],c:1,w:"Move calmly to the designated or safer waiting space and stay away from the edge."},
+{p:"E",d:"E",t:"Board Safely",q:"The train arrives. What is the safest choice?",a:["Wait for the train to stop and board without pushing.","Try to board while it is moving.","Stand in the doorway and block others."],c:0,w:"Wait until the train has stopped and board calmly."}
+];
+let i=0,score=0,time=60,locked=false,timer;
+const $=x=>document.getElementById(x);
+function render(){
+ const q=qs[i];locked=false;$("point").textContent=q.p;$("dest").textContent=q.d;$("title").textContent=q.t;$("question").textContent=q.q;$("feedback").textContent="";$("next").classList.add("hidden");$("bar").style.width=(i/qs.length*100)+"%";$("person").style.left=(7+i*19)+"%";
+ $("answers").innerHTML="";
+ q.a.forEach((x,n)=>{let b=document.createElement("button");b.className="answer";b.textContent=x;b.onclick=()=>answer(n,b);$("answers").appendChild(b)})
+}
+function answer(n,b){
+ if(locked)return;locked=true;let q=qs[i];[...$("answers").children].forEach(x=>x.disabled=true);
+ if(n===q.c){score+=10;b.style.borderColor="#177b7f";$("feedback").textContent="✅ Safe choice! +10 points. "+q.w}else{b.style.borderColor="#b56b55";$("feedback").textContent="❌ Try to remember: "+q.w}
+ $("score").textContent=score;
+ if(i<qs.length-1)$("next").classList.remove("hidden");else setTimeout(end,850)
+}
+$("next").onclick=()=>{i++;render()};
+function end(timeout=false){
+ clearInterval(timer);$("play").classList.add("hidden");$("result").classList.remove("hidden");$("final").textContent=score;
+ if(score===50){$("badge").textContent="🏆 Station Safety Star";$("resultText").textContent="Excellent! You made safe choices throughout the station."}
+ else if(score>=30){$("badge").textContent="🌟 Safe Mobility Explorer";$("resultText").textContent="Good work! You identified most of the safer choices."}
+ else{$("badge").textContent="🚦 Station Safety Learner";$("resultText").textContent="Nice try! Play again and spot the safer routes."}
+ if(timeout)$("resultText").textContent+=" The timer ran out, so try again for a higher score.";
+}
+function restart(){i=0;score=0;time=60;$("score").textContent=0;$("timer").textContent=60;$("result").classList.add("hidden");$("play").classList.remove("hidden");render();clearInterval(timer);timer=setInterval(()=>{time--;$("timer").textContent=time;if(time<=0)end(true)},1000)}
+render();timer=setInterval(()=>{time--;$("timer").textContent=time;if(time<=0)end(true)},1000);
+</script>
+</body>
+</html>
